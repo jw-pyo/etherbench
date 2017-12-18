@@ -80,19 +80,43 @@ def init_geths():
 		i += 1
 	
 def run_geths():
+	
 	i = 0
+	#1. make python script to execute geth and copy to each container
+	for miner_rpc, miner_network in zip(miner_rpcports, miner_networkports):
+		import_command = "import os\n" 
+		geth_command = "os.system(\"geth --datadir /home/jwpyo/pidl_chain/ --networkid 19940512 --rpc --rpcport {} --port {} --nodiscover 2>> /home/jwpyo/gethinfo.log\")".format(miner_rpc, miner_network)
+		with open("miner_"+str(i)+"_exe.py", "w") as f:
+			f.write(import_command+geth_command)
+		time.sleep(2)	
+		docker_command = "docker cp miner_{}_exe.py miner_{}:/home/jwpyo/".format(i, i)
+		os.system(docker_command)
+		i += 1
+	time.sleep(3) #give time about copy time
+	i = 0
+	#2. execute python script in each container
 	for miner_rpc, miner_network in zip(miner_rpcports, miner_networkports): 
-		geth_command = "\"geth --datadir /home/jwpyo/pidl_chain/ --networkid 19940512 --rpc --rpcaddr --rpcport "+str(miner_rpc)+" --port "+str(miner_network)+" --nodiscover --metrics 2>> /home/jwpyo/gethinfo.log\""
-		to_docker_command = "docker exec -d miner_"+str(i)+" bash -c "
-		os.system(to_docker_command + geth_command)
-		print(to_docker_command + geth_command)
+		docker_command = "docker exec -d miner_{} bash -c \"python /home/jwpyo/miner_{}_exe.py\"".format(i, i)
+		os.system(docker_command)
 		i += 1
 
 def make_enode_list():
 	# make enode.txt in each containers
+	i = 0
+	js_command = "console.log(admin.nodeInfo.enode);"
+	with open("enode.js", "w") as f:
+		f.write(js_command)
+	time.sleep(2)	
+	for miner_rpc, miner_network in zip(miner_rpcports, miner_networkports):
+		docker_command = "docker cp enode.js miner_{}:/home/jwpyo/".format(i)
+		os.system(docker_command)
+		i += 1
+	time.sleep(3) #give time about copy time
+	
 	for i in range(miner_number):
 		to_docker_command = "docker exec -d miner_"+str(i)+" bash -c "
-		geth_command = "\"geth --exec \"admin.nodeInfo.enode\" attach --datadir \"/home/jwpyo/pidl_chain\" > /home/jwpyo/enode{}.txt\"".format(i)
+	#	geth_command = "\"geth --exec 'loadScript(\"/home/jwpyo/enode.js\")' attach /home/jwpyo/pidl_chain/geth.ipc > /home/jwpyo/enode{}.txt\"".format(i)
+		geth_command = "\"geth --exec \"admin.nodeInfo.enode\" attach \"/home/jwpyo/pidl_chain/geth.ipc\" > /home/jwpyo/enode{}.txt\"".format(i)
 		print(to_docker_command+geth_command)
 		os.system(to_docker_command+geth_command)
 	time.sleep(5) #give time to make enode file
@@ -101,13 +125,29 @@ def make_enode_list():
 		print(to_docker_command)
 		os.system(to_docker_command)
 
+def trim_enodes():
+	enode_file = open("enodes.txt", "a")
+	for i, filename in enumerate(os.listdir("../enode/")):
+		f = open("../enode/"+filename, 'r')
+		sentence = "admin.addPeer("+str(f.read().strip())+")"
+		sentence = sentence.replace("[::]", "172.17.0.{}".format(i+3))
+		sentence = sentence.replace("?discport=0", "")
+		enode_file.write(sentence)
+		print(sentence)
+		enode_file.write("\n")
+		f.close()
+	enode_file.close()
+	
+		
+		
+		
 		 	
 
 def exit():
 	sys.exit()
 
 if __name__ == "__main__":
-	func = [stop_containers, stop_n_del_containers, check_ports_valid, auto_rearrange_valid_port, make_containers, init_geths, run_geths, make_enode_list, exit]
+	func = [stop_containers, stop_n_del_containers, check_ports_valid, auto_rearrange_valid_port, make_containers, init_geths, run_geths, make_enode_list, trim_enodes, exit]
 	while True:
 		menu = raw_input("""
 Choose the number of func to execute:
@@ -119,7 +159,8 @@ Choose the number of func to execute:
 5. init_geths
 6. run_geths
 7. make_enode_list
-8. exit
+8. trim_enodes
+9. exit
 """
 )
 		func[int(menu)]()			     
