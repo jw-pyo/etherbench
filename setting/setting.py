@@ -6,7 +6,7 @@ import sys
 import os
 import time
 
-IMAGE_NAME = "etherbench:1.0"
+IMAGE_NAME = "etherbench:1.1"
 miner_number = int(sys.argv[1])
 miner_rpcports= [i for i in range(8600, 8600+miner_number)]
 miner_networkports= [i for i in range(40000, 40000+miner_number)]

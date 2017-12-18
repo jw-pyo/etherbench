@@ -1,1 +1,1 @@
-"enode://188ea151d9943103372683ff3d52599fdc44e306c3c74ab30276d7217616da0eb816ed5266b237b58df1e02776d93502a8b40d8d87667ceab77707423a89d345@[::]:30303"
+Fatal: Unable to attach to remote geth: dial unix /home/jwpyo/pidl_chain/geth.ipc: connect: no such file or directory
